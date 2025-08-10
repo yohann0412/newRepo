@@ -172,8 +172,9 @@ Take good notes and be polite. If they can't help with catering, thank them and 
             # Make the call with voice settings
             call_response = voice_agent.make_call_with_task(request.venue_phone, task, voice_settings)
             
-            if call_response.get("status") == "success":
-                call_id = call_response.get("call_id")
+            # Bland AI returns call_id directly, not wrapped in status
+            if call_response.get("call_id") or call_response.get("id"):
+                call_id = call_response.get("call_id") or call_response.get("id")
                 
                 # Create response
                 response = VenueInquiryResponse(
@@ -232,6 +233,68 @@ Take good notes and be polite. If they can't help with catering, thank them and 
                 return self.active_inquiries[inquiry_id]["response"]
         
         return None
+    
+    def update_inquiry_status(self, inquiry_id: str) -> Optional[VenueInquiryResponse]:
+        """
+        Update the status of an active inquiry by checking with Bland AI
+        
+        Args:
+            inquiry_id: Unique inquiry identifier
+            
+        Returns:
+            Updated VenueInquiryResponse or None if not found
+        """
+        with self.lock:
+            if inquiry_id not in self.active_inquiries:
+                return None
+            
+            inquiry_data = self.active_inquiries[inquiry_id]
+            voice_agent = inquiry_data["voice_agent"]
+            call_id = inquiry_data["response"].call_id
+            
+            try:
+                # Check call status with Bland AI
+                call_details = voice_agent.get_call_details(call_id)
+                status = call_details.get("status", "unknown")
+                
+                # Update the response status
+                inquiry_data["response"].status = status
+                
+                # If completed, move to completed inquiries
+                if status in ["completed", "failed", "no_answer", "busy", "timeout"]:
+                    # Parse call result
+                    call_result = voice_agent._parse_call_result(call_details)
+                    
+                    # Update response with call results
+                    response = inquiry_data["response"]
+                    response.call_summary = call_result.summary
+                    response.transcript = call_result.transcript
+                    response.extracted_quotes = call_result.quotes
+                    response.dietary_info = call_result.dietary_info
+                    response.next_steps = call_result.next_steps
+                    response.completed_at = time.strftime("%Y-%m-%d %H:%M:%S")
+                    
+                    # Add call metadata
+                    response.call_metadata = {
+                        "duration": call_details.get("corrected_duration"),
+                        "cost": call_details.get("price"),
+                        "answered_by": call_details.get("answered_by"),
+                        "call_ended_by": call_details.get("call_ended_by"),
+                        "started_at": call_details.get("started_at"),
+                        "ended_at": call_details.get("end_at")
+                    }
+                    
+                    # Move to completed
+                    self.completed_inquiries[inquiry_id] = response
+                    del self.active_inquiries[inquiry_id]
+                    
+                    logger.info(f"Inquiry {inquiry_id} completed for {response.venue_name}")
+                
+                return inquiry_data["response"]
+                
+            except Exception as e:
+                logger.error(f"Error updating inquiry status: {e}")
+                return inquiry_data["response"]
 
     def wait_for_inquiry_completion(self, inquiry_id: str, timeout: int = 300) -> Optional[VenueInquiryResponse]:
         """

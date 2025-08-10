@@ -125,7 +125,8 @@ class VoiceServiceAPI:
             Dictionary with inquiry status and details
         """
         try:
-            response = self.service.get_inquiry_status(inquiry_id)
+            # First update the status with Bland AI
+            response = self.service.update_inquiry_status(inquiry_id)
             
             if response is None:
                 return {
