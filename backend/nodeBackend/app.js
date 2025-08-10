@@ -174,7 +174,7 @@ function extractPhoneNumbers(rows) {
 async function callPythonVoiceAgent(venueData, clientInfo) {
   return new Promise((resolve, reject) => {
     // Path to the Python script
-    const pythonScriptPath = path.join(__dirname, '..', 'voice-agent', 'voice_agent_runner.py');
+    const pythonScriptPath = path.join(__dirname, '..', 'voice-agent', 'voiceAgentRunner.py');
     
     // Prepare the data for Python
     const pythonData = {
