@@ -1,5 +1,10 @@
 import React from 'react';
-export const HeroSection = () => {
+
+interface HeroSectionProps {
+  onGetStarted: () => void;
+}
+
+export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
   return <div className="min-h-screen w-full bg-white relative">
       {/* Teal Glow Background */}
       <div
@@ -32,7 +37,10 @@ export const HeroSection = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
               <input type="email" placeholder="Enter your email" className="px-6 py-3 rounded-lg border border-gray-200 flex-grow focus:outline-none focus:ring-2 focus:ring-blue-200" />
-              <button className="px-6 py-3 rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors flex items-center justify-center gap-2">
+              <button 
+                onClick={onGetStarted}
+                className="px-6 py-3 rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
+              >
                 Get Started
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M7 17L17 7M17 7H7M17 7V17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
