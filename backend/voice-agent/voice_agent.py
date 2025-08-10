@@ -73,7 +73,17 @@ class BlandVoiceAgent:
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
-            raise Exception(f"Failed to initiate call with pathway: {str(e)}")
+            # Add detailed error debugging
+            error_msg = f"Failed to initiate call with pathway: {str(e)}"
+            if hasattr(e, 'response') and e.response is not None:
+                try:
+                    error_body = e.response.text
+                    error_msg += f"\nError Body: {error_body}"
+                    error_msg += f"\nStatus Code: {e.response.status_code}"
+                    error_msg += f"\nRequest Payload: {json.dumps(payload, indent=2)}"
+                except Exception:
+                    pass
+            raise Exception(error_msg)
     
     def make_call_with_task(self, phone_number: str, task: str, voice_settings: Dict = None) -> Dict:
         """
@@ -92,10 +102,8 @@ class BlandVoiceAgent:
             "phone_number": phone_number,
             "task": task,
             "record": True,  # Record the call for transcript
-            "noise_cancellation": True,  # Reduce background noise
-            "wait_for_greeting": True,  # Wait for person to say hello
-            "interruption_threshold": 0.5,  # Allow natural interruptions
-            "temperature": 0.7  # Slightly creative but focused responses
+            "wait": True,  # Wait for person to say hello before starting
+            "max_duration": 300  # Max call duration in seconds
         }
         
         # Add voice settings if provided
@@ -119,7 +127,17 @@ class BlandVoiceAgent:
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
-            raise Exception(f"Failed to initiate call with task: {str(e)}")
+            # Add detailed error debugging
+            error_msg = f"Failed to initiate call with task: {str(e)}"
+            if hasattr(e, 'response') and e.response is not None:
+                try:
+                    error_body = e.response.text
+                    error_msg += f"\nError Body: {error_body}"
+                    error_msg += f"\nStatus Code: {e.response.status_code}"
+                    error_msg += f"\nRequest Payload: {json.dumps(payload, indent=2)}"
+                except Exception:
+                    pass
+            raise Exception(error_msg)
     
     def make_call(self, phone_number: str, pathway_id: str = None, task: str = None) -> Dict:
         """
@@ -157,7 +175,16 @@ class BlandVoiceAgent:
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
-            raise Exception(f"Failed to get call details: {str(e)}")
+            # Add detailed error debugging
+            error_msg = f"Failed to get call details: {str(e)}"
+            if hasattr(e, 'response') and e.response is not None:
+                try:
+                    error_body = e.response.text
+                    error_msg += f"\nError Body: {error_body}"
+                    error_msg += f"\nStatus Code: {e.response.status_code}"
+                except Exception:
+                    pass
+            raise Exception(error_msg)
     
     def stop_call(self, call_id: str) -> Dict:
         """
@@ -176,7 +203,16 @@ class BlandVoiceAgent:
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
-            raise Exception(f"Failed to stop call: {str(e)}")
+            # Add detailed error debugging
+            error_msg = f"Failed to stop call: {str(e)}"
+            if hasattr(e, 'response') and e.response is not None:
+                try:
+                    error_body = e.response.text
+                    error_msg += f"\nError Body: {error_body}"
+                    error_msg += f"\nStatus Code: {e.response.status_code}"
+                except Exception:
+                    pass
+            raise Exception(error_msg)
     
     def wait_for_call_completion(self, call_id: str, timeout: int = 300, check_interval: int = 10) -> CallResult:
         """

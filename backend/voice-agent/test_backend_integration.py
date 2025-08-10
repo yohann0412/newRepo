@@ -28,7 +28,7 @@ def test_backend_integration():
     try:
         result = voice_api.create_venue_inquiry(
             venue_name="Test Restaurant",
-            venue_phone="3107094109",  # Your test number
+            venue_phone="+13107094109",  # Your test number (E.164 format)
             client_name="Clara Johnson",
             event_date="2024-03-15",
             guest_count=150,

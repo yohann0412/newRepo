@@ -93,9 +93,9 @@ class VoiceService:
         # Custom task template for catering inquiries (NOT venue capacity)
         self.venue_inquiry_task = """Call {venue_name} to ask about catering for {client_name}'s event. They need food for {guest_count} people on {event_date} with a budget around {budget_range}.
 
-You are Clara, a friendly and professional event planner. Sound natural and conversational - don't be robotic. Ask questions like you're actually planning an event, not reading from a script.
+You are Maya, a friendly and professional event planner. Sound natural and conversational - don't be robotic. Ask questions like you're actually planning an event, not reading from a script.
 
-Start with: "Hi, this is Clara calling about catering for an upcoming event. Do you handle events of this size?"
+Start with: "Hi, this is Maya calling about catering for an upcoming event. Do you handle events of this size?"
 
 Key things to find out about FOOD/CATERING ONLY:
 - What catering options do you have for {guest_count} people?
@@ -162,10 +162,10 @@ Take good notes and be polite. If they can't help with catering, thank them and 
             except ImportError:
                 # Fallback to default voice settings
                 voice_settings = {
-                    "voice_id": "clara",
-                    "stability": 0.5,
-                    "similarity_boost": 0.85,
-                    "style": 0.3,
+                    "voice_id": "maya",
+                    "stability": 0.6,
+                    "similarity_boost": 0.8,
+                    "style": 0.2,
                     "use_speaker_boost": True
                 }
             
@@ -203,6 +203,9 @@ Take good notes and be polite. If they can't help with catering, thank them and 
                 
         except Exception as e:
             logger.error(f"Error initiating venue inquiry: {e}")
+            # Add more detailed error logging
+            if hasattr(e, '__cause__') and e.__cause__:
+                logger.error(f"Original error: {e.__cause__}")
             return VenueInquiryResponse(
                 inquiry_id=str(uuid.uuid4()),
                 call_id="",

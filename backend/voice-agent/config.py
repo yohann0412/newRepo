@@ -50,9 +50,19 @@ CHECK_INTERVAL = 10  # Check status every 10 seconds
 # Set to True to enforce E.164 format validation
 ENFORCE_E164_FORMAT = True
 
+# Voice Configuration
+# Bland AI voice options - choose one that sounds most natural
+# Valid voice IDs: "maya" (Young American Female), "tina" (Gentle American Female), "adriana" (Professional American Female)
+VOICE_ID = "maya"  # Young American Female - soft, professional, natural
+VOICE_SETTINGS = {
+    "voice_id": "maya",   # Young American Female - soft, professional, natural
+    "stability": 0.6,     # Slightly higher stability for consistency (0.0 to 1.0)
+    "similarity_boost": 0.8,   # Natural similarity for human-like sound (0.0 to 1.0)
+    "style": 0.2,         # Lower style for less robotic, more natural speech (0.0 to 1.0)
+    "use_speaker_boost": True  # Enhance voice clarity
+}
+
 # Logging configuration
 LOG_LEVEL = "INFO"  # DEBUG, INFO, WARNING, ERROR
 LOG_TO_FILE = False
 LOG_FILE_PATH = "voice_agent.log"
-
-API_KEY = "org_984e2aaad1993874b7806883c0d68e46ad3b717df99f90ede19b4f52b32bafbf03f6fae42cf12c024df569"
