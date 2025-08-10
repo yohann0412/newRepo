@@ -170,6 +170,33 @@ function extractPhoneNumbers(rows) {
   });
 }
 
+// Summarize the voice agent result for end users
+async function summarizeVoiceAgentResult(voiceAgentResult) {
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
+  const content =
+    typeof voiceAgentResult === 'string'
+      ? voiceAgentResult
+      : JSON.stringify(voiceAgentResult, null, 2);
+
+  const prompt = `
+You are writing a short update for a user summarizing a phone call the AI had with a venue.
+
+Write a clear, concise summary (3–6 sentences) covering:
+- What happened and the outcome
+- Any prices/quotes or key details
+- Tone/issues if relevant (e.g., rude response)
+- One actionable next step for the user
+
+Source data to summarize:
+${content}
+
+Return ONLY the summary text, no preamble or markdown.
+  `.trim();
+
+  const result = await model.generateContent(prompt);
+  return result.response.text();
+}
+
 // Function to call Python voice agent
 async function callPythonVoiceAgent(venueData, clientInfo) {
   return new Promise((resolve, reject) => {
@@ -208,7 +235,13 @@ async function callPythonVoiceAgent(venueData, clientInfo) {
     pythonProcess.on('close', (code) => {
       if (code === 0) {
         try {
-          const result = outputData
+          const trimmed = outputData.trim();
+          let result;
+          try {
+            result = JSON.parse(trimmed);
+          } catch {
+            result = trimmed; // fallback: raw string (likely a Python dict repr)
+          }
           resolve(result);
         } catch (parseError) {
           console.error('Error parsing Python output:', parseError);
@@ -226,6 +259,116 @@ async function callPythonVoiceAgent(venueData, clientInfo) {
       reject(error);
     });
   });
+}
+
+// Function to get event by ID and update with summary
+async function updateEventWithSummary(eventId, summary) {
+  try {
+    // First, get the event details including client ID (user_id)
+    const { data: eventData, error: fetchError } = await supabase
+      .from('events')
+      .select('id, user_id, title, description, event_type, status')
+      .eq('id', eventId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching event:', fetchError);
+      throw new Error('Failed to fetch event details');
+    }
+
+    if (!eventData) {
+      throw new Error('Event not found');
+    }
+
+    // Update the event with the summary
+    const { data: updateData, error: updateError } = await supabase
+      .from('events')
+      .update({ 
+        summary: summary,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', eventId)
+      .select('*')
+      .single();
+
+    if (updateError) {
+      console.error('Error updating event with summary:', updateError);
+      throw new Error('Failed to update event with summary');
+    }
+
+    return {
+      success: true,
+      event: updateData,
+      client_id: eventData.user_id,
+      message: 'Event updated with summary successfully'
+    };
+
+  } catch (error) {
+    console.error('Error in updateEventWithSummary:', error);
+    return {
+      success: false,
+      error: error.message,
+      client_id: null
+    };
+  }
+}
+
+// Function to create or update event with voice agent summary
+async function createOrUpdateEventWithVoiceAgentSummary(eventData, voiceAgentSummary) {
+  try {
+    let event;
+    let client_id;
+
+    if (eventData.id) {
+      // Update existing event
+      const result = await updateEventWithSummary(eventData.id, voiceAgentSummary);
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+      event = result.event;
+      client_id = result.client_id;
+    } else {
+      // Create new event with summary
+      const { data: newEvent, error: createError } = await supabase
+        .from('events')
+        .insert({
+          title: eventData.title || 'Voice Agent Event',
+          description: eventData.description || 'Event created from voice agent interaction',
+          event_type: eventData.event_type || 'venue_inquiry',
+          user_id: eventData.user_id || 'temp-user-id', // In real app, this would come from auth
+          summary: voiceAgentSummary,
+          status: 'planning',
+          event_date: eventData.event_date || new Date().toISOString().split('T')[0],
+          budget: eventData.budget || 0,
+          guest_count: eventData.guest_count || 2
+        })
+        .select('*')
+        .single();
+
+      if (createError) {
+        console.error('Error creating event:', createError);
+        throw new Error('Failed to create event');
+      }
+
+      event = newEvent;
+      client_id = newEvent.user_id;
+    }
+
+    return {
+      success: true,
+      event: event,
+      client_id: client_id,
+      message: eventData.id ? 'Event updated successfully' : 'Event created successfully'
+    };
+
+  } catch (error) {
+    console.error('Error in createOrUpdateEventWithVoiceAgentSummary:', error);
+    return {
+      success: false,
+      error: error.message,
+      client_id: null
+    };
+  }
 }
 
 // Function to check inquiry status later (for calls that are still in progress)
@@ -269,7 +412,7 @@ async function checkInquiryStatus(inquiryId) {
 // Routes
  app.post('/api/process-prompt', async (req, res) => {
    try {
-     const { prompt, cuisine: cuisineFromClient, clientInfo } = req.body;
+     const { prompt, cuisine: cuisineFromClient, clientInfo, eventData } = req.body;
      if (!prompt) return res.status(400).json({ error: 'Prompt is required' });
 
      const extracted = await extractVenueInfo(prompt);
@@ -279,11 +422,32 @@ async function checkInquiryStatus(inquiryId) {
 
      // Call Python voice agent with the extracted venue data
      let voiceAgentResult = null;
+     let voiceAgentSummary = null;
+     let eventResult = null;
+     
      if (extracted.venue_name && extracted.venue_phone) {
        try {
          console.log('Calling Python voice agent...');
          voiceAgentResult = await callPythonVoiceAgent(extracted, clientInfo || {});
-         console.log('Voice agent result:', voiceAgentResult);
+         console.log('Voice agent result for app.js:', voiceAgentResult);
+         try {
+           voiceAgentSummary = await summarizeVoiceAgentResult(voiceAgentResult);
+           
+           // If eventData is provided, create or update the event with the summary
+           if (eventData || voiceAgentSummary) {
+             const eventInfo = eventData || {
+               id: eventData.id,
+               title: `Venue Inquiry for ${extracted.venue_name}`,
+               description: `Voice agent inquiry for ${extracted.venue_name}`,
+               event_type: 'venue_inquiry'
+             };
+             
+             eventResult = await createOrUpdateEventWithVoiceAgentSummary(eventInfo, voiceAgentSummary);
+             console.log('Event updated with summary:', eventResult);
+           }
+         } catch (summErr) {
+           console.error('Summarization error:', summErr?.message || summErr);
+         }
        } catch (voiceError) {
          console.error('Voice agent error:', voiceError);
          voiceAgentResult = { error: voiceError.message };
@@ -296,6 +460,9 @@ async function checkInquiryStatus(inquiryId) {
        matching_restaurants: restaurants,
        phone_numbers: phones,
        voice_agent_result: voiceAgentResult,
+       voice_agent_summary: voiceAgentSummary,
+       event_result: eventResult,
+       client_id: eventResult?.client_id || null,
        message: 'Prompt processed successfully',
      });
    } catch (err) {
@@ -303,6 +470,54 @@ async function checkInquiryStatus(inquiryId) {
      res.status(500).json({ error: 'Failed to process prompt', details: err.message });
    }
  });
+
+// New endpoint to update event with summary
+app.post('/api/events/update-summary', async (req, res) => {
+  try {
+    const { event_id, summary, event_data } = req.body;
+    
+    if (!event_id && !event_data) {
+      return res.status(400).json({ error: 'Either event_id or event_data is required' });
+    }
+    
+    if (!summary) {
+      return res.status(400).json({ error: 'Summary is required' });
+    }
+
+    let result;
+    
+    if (event_id) {
+      // Update existing event by ID
+      result = await updateEventWithSummary(event_id, summary);
+    } else {
+      // Create new event with summary
+      result = await createOrUpdateEventWithVoiceAgentSummary(event_data, summary);
+    }
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        event: result.event,
+        client_id: result.client_id,
+        message: result.message
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: result.error,
+        message: 'Failed to update event with summary'
+      });
+    }
+    
+  } catch (err) {
+    console.error('Error updating event with summary:', err);
+    res.status(500).json({ 
+      success: false,
+      error: err.message,
+      message: 'Internal server error'
+    });
+  }
+});
 
 // New endpoint to check inquiry status later
 app.post('/api/check-inquiry-status', async (req, res) => {
@@ -332,8 +547,10 @@ app.get('/api/health', (_req, res) =>
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log(`Health:  http://localhost:${PORT}/api/health`);
-  console.log(`Process: http://localhost:${PORT}/api/process-prompt`);
+  console.log(`Health:         http://localhost:${PORT}/api/health`);
+  console.log(`Process:        http://localhost:${PORT}/api/process-prompt`);
+  console.log(`Update Events:  http://localhost:${PORT}/api/events/update-summary`);
+  console.log(`Check Status:   http://localhost:${PORT}/api/check-inquiry-status`);
 });
 
 module.exports = app;

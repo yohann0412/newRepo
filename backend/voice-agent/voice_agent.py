@@ -560,13 +560,14 @@ def main():
         
         # Get summary
         summary = event_manager.get_inquiry_summary(call_id)
-        
+        '''
         print("Catering inquiry completed!")
         print(f"Call ID: {summary['call_id']}")
         print(f"Status: {summary['call_outcome']['status']}")
         print(f"Quotes received: {summary['call_outcome']['quotes']}")
         print(f"Dietary info: {summary['call_outcome']['dietary_info']}")
         print(f"Next steps: {summary['call_outcome']['next_steps']}")
+        '''
         
     except Exception as e:
         print(f"Error in catering inquiry: {e}")

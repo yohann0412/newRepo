@@ -100,6 +100,7 @@ def run_voice_agent(venue_data: Dict[str, Any], client_info: Dict[str, Any]) -> 
                     "extracted_quotes": completion_result.extracted_quotes,
                     "dietary_info": completion_result.dietary_info,
                     "next_steps": completion_result.next_steps,
+                    "transcript": completion_result.transcript,
                     "message": "Call completed successfully"
                 }
             else:
@@ -185,7 +186,7 @@ def main():
         # Ensure we only output clean JSON to stdout (Node.js will capture this)
         # All debug/logging should go to stderr
         print(result)
-        
+        return result
         # Exit with success code
         sys.exit(0)
         
