@@ -185,7 +185,6 @@ def main():
         
         # Ensure we only output clean JSON to stdout (Node.js will capture this)
         # All debug/logging should go to stderr
-        print(result)
         return result
         # Exit with success code
         sys.exit(0)

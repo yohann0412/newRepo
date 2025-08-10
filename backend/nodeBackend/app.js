@@ -321,6 +321,8 @@ async function createOrUpdateEventWithVoiceAgentSummary(eventData, voiceAgentSum
 
     if (eventData.id) {
       // Update existing event
+      console.log(eventData.id)
+      console.log(voiceAgentSummary)
       const result = await updateEventWithSummary(eventData.id, voiceAgentSummary);
       if (!result.success) {
         throw new Error(result.error);
@@ -415,17 +417,25 @@ async function checkInquiryStatus(inquiryId) {
      const { prompt, cuisine: cuisineFromClient, clientInfo, eventData } = req.body;
      if (!prompt) return res.status(400).json({ error: 'Prompt is required' });
 
-     const extracted = await extractVenueInfo(prompt);
-     const cuisine = (cuisineFromClient || 'italian').trim();
-     const restaurants = await getRestaurantsByCuisine(cuisine);
-     const phones = extractPhoneNumbers(restaurants);
+         const extracted = await extractVenueInfo(prompt);
+    const cuisine = (cuisineFromClient || 'italian').trim();
+    const restaurants = await getRestaurantsByCuisine(cuisine);
+    const phones = extractPhoneNumbers(restaurants);
 
-     // Call Python voice agent with the extracted venue data
-     let voiceAgentResult = null;
-     let voiceAgentSummary = null;
-     let eventResult = null;
-     
-     if (extracted.venue_name && extracted.venue_phone) {
+    // Brute force phone number for testing
+    if (!extracted.venue_phone) {
+      extracted.venue_phone = '+16193104433';
+    }
+    if (!extracted.venue_name) {
+      extracted.venue_name = 'Chipotle'; // Default venue name
+    }
+
+    // Call Python voice agent with the extracted venue data
+    let voiceAgentResult = null;
+    let voiceAgentSummary = null;
+    let eventResult = null;
+    
+    if (extracted.venue_name && extracted.venue_phone) {
        try {
          console.log('Calling Python voice agent...');
          voiceAgentResult = await callPythonVoiceAgent(extracted, clientInfo || {});
