@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Any, Union
 from dataclasses import asdict
 
 from voice_service import VoiceService, VenueInquiryRequest, VenueInquiryResponse
-from production_config import get_config
+from config import API_KEY, VOICE_SETTINGS
 
 
 class VoiceServiceAPI:
@@ -19,21 +19,16 @@ class VoiceServiceAPI:
     Designed for backend integration
     """
     
-    def __init__(self, api_key: str = None, max_concurrent_calls: int = None):
+    def __init__(self, api_key: str = None, max_concurrent_calls: int = 10):
         """
         Initialize the API interface
         
         Args:
             api_key: Bland AI API key (uses config if not provided)
-            max_concurrent_calls: Max concurrent calls (uses config if not provided)
+            max_concurrent_calls: Max concurrent calls (default: 10)
         """
         if api_key is None:
-            config = get_config()
-            api_key = config.get_api_key()
-        
-        if max_concurrent_calls is None:
-            config = get_config()
-            max_concurrent_calls = config.MAX_CONCURRENT_CALLS
+            api_key = API_KEY
         
         self.service = VoiceService(api_key, max_concurrent_calls)
     
@@ -101,12 +96,14 @@ class VoiceServiceAPI:
             # Return clean response
             return {
                 "success": True,
-                "inquiry_id": response.inquiry_id,
-                "call_id": response.call_id,
-                "status": response.status,
-                "venue_name": response.venue_name,
-                "client_name": response.client_name,
-                "created_at": response.created_at,
+                "data": {
+                    "inquiry_id": response.inquiry_id,
+                    "call_id": response.call_id,
+                    "status": response.status,
+                    "venue_name": response.venue_name,
+                    "client_name": response.client_name,
+                    "created_at": response.created_at
+                },
                 "message": "Venue inquiry initiated successfully"
             }
             
@@ -167,8 +164,7 @@ class VoiceServiceAPI:
         """
         try:
             if timeout is None:
-                config = get_config()
-                timeout = config.CALL_TIMEOUT_SECONDS
+                timeout = 300  # Default 5 minutes
             
             response = self.service.wait_for_inquiry_completion(inquiry_id, timeout)
             
@@ -279,8 +275,7 @@ class VoiceServiceAPI:
         """
         try:
             if max_age_hours is None:
-                config = get_config()
-                max_age_hours = config.INQUIRY_CLEANUP_HOURS
+                max_age_hours = 24  # Default 24 hours
             
             cleaned_count = self.service.cleanup_old_inquiries(max_age_hours)
             

@@ -90,29 +90,38 @@ class VoiceService:
         self.lock = threading.Lock()
         self.executor = ThreadPoolExecutor(max_workers=max_concurrent_calls)
         
-        # Custom task template for venue inquiries
-        self.venue_inquiry_task = """Call {venue_name} to inquire about venue availability and pricing for {client_name}'s event.
+        # Custom task template for catering inquiries (NOT venue capacity)
+        self.venue_inquiry_task = """Call {venue_name} to ask about catering for {client_name}'s event. They need food for {guest_count} people on {event_date} with a budget around {budget_range}.
 
-Event Details:
-- Date: {event_date}
-- Guest Count: {guest_count} people
-- Event Type: {event_type}
-- Budget Range: {budget_range}
-- Special Requests: {special_requests}
+You are Clara, a friendly and professional event planner. Sound natural and conversational - don't be robotic. Ask questions like you're actually planning an event, not reading from a script.
 
-Required Information to Gather:
-1. Venue availability for the specified date
-2. Pricing and what's included (tables, chairs, AV, parking)
-3. Capacity and space details
-4. Restrictions (noise, alcohol, decorations, music)
-5. Additional fees and charges
-6. Catering options and dietary accommodations
-7. Booking process and deposit requirements
-8. Contact information for follow-up
+Start with: "Hi, this is Clara calling about catering for an upcoming event. Do you handle events of this size?"
 
-Tone: Professional, friendly, and business-focused. Be thorough in gathering all details and pricing information.
+Key things to find out about FOOD/CATERING ONLY:
+- What catering options do you have for {guest_count} people?
+- What's your per-person pricing and what's included in the food package?
+- Can you handle dietary restrictions (vegetarian, gluten-free, etc.)?
+- What menu options do you offer for corporate events?
+- Do you provide serving staff, setup, and delivery?
+- What's your lead time for food orders and cancellation policy?
+- Any additional fees for food service I should know about?
 
-If the venue meets requirements, express interest in proceeding with a tentative reservation pending client approval."""
+NEGOTIATION STRATEGY:
+When they give you pricing, remember this is a bulk food order for {guest_count} people. Politely ask about discounts:
+- "Since this is for {guest_count} people, do you offer any bulk discounts or corporate rates on catering?"
+- "That's a bit higher than our budget. For an order this size, could you work with us on the per-person food pricing?"
+- "We're also looking at a few other catering options. What's the best you can do for a group this large?"
+- "Is there any flexibility on the per-person rate for corporate catering events?"
+
+Example questions to ask naturally:
+- "What kind of menus do you offer for corporate events?"
+- "Does that price include plates, utensils, and serving staff?"
+- "How far in advance do you need the final food count?"
+- "What happens if we need to make changes to the food order?"
+
+Get their contact info and ask them to email a catering quote. Sound interested but not desperate - like you're comparing a few catering options.
+
+Take good notes and be polite. If they can't help with catering, thank them and move on. If they sound good, ask about next steps for placing the food order."""
 
     def _generate_task_from_request(self, request: VenueInquiryRequest) -> str:
         """Generate custom task from venue inquiry request"""
@@ -146,8 +155,22 @@ If the venue meets requirements, express interest in proceeding with a tentative
             # Generate task
             task = self._generate_task_from_request(request)
             
-            # Make the call
-            call_response = voice_agent.make_call_with_task(request.venue_phone, task)
+            # Get voice settings from config
+            try:
+                from config import VOICE_SETTINGS
+                voice_settings = VOICE_SETTINGS.copy()
+            except ImportError:
+                # Fallback to default voice settings
+                voice_settings = {
+                    "voice_id": "clara",
+                    "stability": 0.5,
+                    "similarity_boost": 0.85,
+                    "style": 0.3,
+                    "use_speaker_boost": True
+                }
+            
+            # Make the call with voice settings
+            call_response = voice_agent.make_call_with_task(request.venue_phone, task, voice_settings)
             
             if call_response.get("status") == "success":
                 call_id = call_response.get("call_id")

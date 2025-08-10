@@ -75,13 +75,14 @@ class BlandVoiceAgent:
         except requests.exceptions.RequestException as e:
             raise Exception(f"Failed to initiate call with pathway: {str(e)}")
     
-    def make_call_with_task(self, phone_number: str, task: str) -> Dict:
+    def make_call_with_task(self, phone_number: str, task: str, voice_settings: Dict = None) -> Dict:
         """
         Initiate a call using Bland AI's task system.
         
         Args:
             phone_number: Target phone number (E.164 format recommended)
             task: Text prompt describing what the AI should do
+            voice_settings: Optional voice configuration (voice_id, stability, etc.)
             
         Returns:
             API response with call_id and status
@@ -89,8 +90,29 @@ class BlandVoiceAgent:
         endpoint = f"{self.base_url}/calls"
         payload = {
             "phone_number": phone_number,
-            "task": task
+            "task": task,
+            "record": True,  # Record the call for transcript
+            "noise_cancellation": True,  # Reduce background noise
+            "wait_for_greeting": True,  # Wait for person to say hello
+            "interruption_threshold": 0.5,  # Allow natural interruptions
+            "temperature": 0.7  # Slightly creative but focused responses
         }
+        
+        # Add voice settings if provided
+        if voice_settings:
+            # Use the voice_id as the 'voice' parameter (Bland AI API requirement)
+            if "voice_id" in voice_settings:
+                payload["voice"] = voice_settings["voice_id"]
+            
+            # Add other voice parameters that Bland AI supports
+            if "stability" in voice_settings:
+                payload["stability"] = voice_settings["stability"]
+            if "similarity_boost" in voice_settings:
+                payload["similarity_boost"] = voice_settings["similarity_boost"]
+            if "style" in voice_settings:
+                payload["style"] = voice_settings["style"]
+            if "use_speaker_boost" in voice_settings:
+                payload["speaker_boost"] = voice_settings["use_speaker_boost"]
         
         try:
             response = requests.post(endpoint, headers=self.headers, json=payload)
