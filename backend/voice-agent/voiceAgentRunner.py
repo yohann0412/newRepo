@@ -12,7 +12,7 @@ from typing import Dict, Any
 # Import the voice service
 try:
     from voice_service import VoiceService
-    from production_config import get_config
+    from config import API_KEY
     VOICE_SERVICE_AVAILABLE = True
 except ImportError as e:
     print(f"Import error: {e}", file=sys.stderr)
@@ -46,9 +46,8 @@ def run_voice_agent(venue_data: Dict[str, Any], client_info: Dict[str, Any]) -> 
         }
     
     try:
-        # Get configuration
-        config = get_config()
-        api_key = config.get_api_key()
+        # Use the imported API key directly
+        api_key = API_KEY
         
         # Initialize voice service
         voice_service = VoiceService(api_key)
