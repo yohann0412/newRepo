@@ -3,7 +3,7 @@
 
 # Your Bland AI API key
 # Get this from your Bland AI dashboard
-API_KEY = "org_984e2aaad1993874b7806883c0d68e46ad3b717df99f90ede19b4f52b32bafbf03f6fae42cf12c024df569"
+API_KEY = "your_bland_ai_api_key_here"
 
 # Your pathway ID for restaurant catering inquiries (optional)
 # Get this from your Bland AI pathways dashboard
@@ -16,52 +16,31 @@ USE_TASK_BASED_CALLS = True
 
 # Custom task prompt (only used if USE_TASK_BASED_CALLS is True)
 # Leave empty to use auto-generated tasks from requirements
-CUSTOM_TASK = """Call [RESTAURANT_NAME] to ask about catering for [CLIENT_NAME]'s event. They need food for [GUEST_COUNT] people on [EVENT_DATE] with a budget around [BUDGET_RANGE].
+CUSTOM_TASK = """Call potential event venues to inquire about availability, pricing, and capacity for a specific date and time. Ask about included services (tables, chairs, AV, parking), restrictions (noise, alcohol, decor), and any additional fees. Confirm dietary accommodation options with in-house catering (if applicable). Collect all details, send them back in a structured format, and, if the venue meets budget and requirements, proceed to tentatively reserve the date pending client approval.
 
-You are Maya, a friendly and professional event planner. Sound natural and conversational - don't be robotic. Ask questions like you're actually planning an event, not reading from a script.
+Tone & Personality: Friendly, professional, confident, and concise. Polite and clear in questions, with a warm but business-focused demeanor.
 
-Start with: "Hi, this is Maya calling about catering for an upcoming event. Do you handle events of this size?"
+Example phrases:
+Greeting: "Hi, this is [Agent Name] calling on behalf of [Client Name] to check venue availability for an upcoming event."
+Info request: "Could you confirm if your venue is available on [date] for around [guest count] guests?"
+Follow-up: "What's the total rental cost, and does that include tables, chairs, and AV equipment?"
+Clarification: "Are there any restrictions on catering, decorations, or music volume?"
+Closing: "Thanks so much for your time. Could you please email me the full quote and any additional details? I'll review this with my client and get back to you."
 
-Key things to find out about FOOD/CATERING ONLY:
-- What catering options do you have for [GUEST_COUNT] people?
-- What's your per-person pricing and what's included in the food package?
-- Can you handle dietary restrictions (vegetarian, gluten-free, etc.)?
-- What menu options do you offer for corporate events?
-- Do you provide serving staff, setup, and delivery?
-- What's your lead time for food orders and cancellation policy?
-- Any additional fees for food service I should know about?
+Key information to gather:
+- Venue availability for the specified date and time
+- Pricing and what's included (tables, chairs, AV, parking)
+- Capacity and space details
+- Restrictions (noise, alcohol, decorations, music)
+- Additional fees and charges
+- Catering options and dietary accommodations
+- Booking process and deposit requirements
+- Contact information for follow-up
 
-NEGOTIATION STRATEGY:
-When they give you pricing, remember this is a bulk food order for [GUEST_COUNT] people. Politely ask about discounts:
-- "Since this is for [GUEST_COUNT] people, do you offer any bulk discounts or corporate rates on catering?"
-- "That's a bit higher than our budget. For an order this size, could you work with us on the per-person food pricing?"
-- "We're also looking at a few other catering options. What's the best you can do for a group this large?"
-- "Is there any flexibility on the per-person rate for corporate catering events?"
-
-Example questions to ask naturally:
-- "What kind of menus do you offer for corporate events?"
-- "Does that price include plates, utensils, and serving staff?"
-- "How far in advance do you need the final food count?"
-- "What happens if we need to make changes to the food order?"
-
-Get their contact info and ask them to email a catering quote. Sound interested but not desperate - like you're comparing a few catering options.
-
-Take good notes and be polite. If they can't help with catering, thank them and move on. If they sound good, ask about next steps for placing the food order."""
+Be thorough in your questions and take detailed notes. If the venue meets requirements, express interest in proceeding with a tentative reservation pending client approval."""
 
 # API base URL (usually doesn't need to change)
 BASE_URL = "https://api.bland.ai/v1"
-
-# Voice Configuration
-# Bland AI voice options - choose one that sounds most natural
-# Valid voice IDs: "maya" (Young American Female), "tina" (Gentle American Female), "adriana" (Professional American Female)
-VOICE_ID = "maya"  # Young American Female - soft, professional, natural
-VOICE_SETTINGS = {
-    "voice_id": "maya",   # Young American Female - soft, professional, natural
-    "stability": 0.6,     # Slightly higher stability for consistency (0.0 to 1.0)
-    "similarity_boost": 0.8,   # Natural similarity for human-like sound (0.0 to 1.0)
-    "style": 0.2,         # Lower style for less robotic, more natural speech (0.0 to 1.0)
-    "use_speaker_boost": True  # Enhance voice clarity
-}
 
 # Call timeout settings (in seconds)
 CALL_TIMEOUT = 300  # 5 minutes
@@ -75,3 +54,5 @@ ENFORCE_E164_FORMAT = True
 LOG_LEVEL = "INFO"  # DEBUG, INFO, WARNING, ERROR
 LOG_TO_FILE = False
 LOG_FILE_PATH = "voice_agent.log"
+
+API_KEY = "org_984e2aaad1993874b7806883c0d68e46ad3b717df99f90ede19b4f52b32bafbf03f6fae42cf12c024df569"
