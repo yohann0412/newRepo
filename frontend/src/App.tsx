@@ -1,17 +1,21 @@
 import React, { useEffect, useState } from 'react';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { supabase } from './lib/supabase';
-import { Navbar } from './components/Navbar';
-import { HeroSection } from './components/HeroSection';
-import { TrustedBySection } from './components/TrustedBySection';
-import { HowItWorksSection } from './components/HowItWorksSection';
-import { Footer } from './components/Footer';
 import { AuthCard } from './components/AuthCard';
-import { Dashboard } from './components/Dashboard';
+import { Layout } from './components/layout/Layout';
+import { Dashboard } from './pages/Dashboard';
+import { Vendors } from './pages/Vendors';
+import { Guests } from './pages/Guests';
+import { Payments } from './pages/Payments';
+import { Settings } from './pages/Settings';
+import { Onboarding } from './pages/Onboarding';
+import { LandingPage } from './components/LandingPage';
 
 export function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showAuth, setShowAuth] = useState(false);
+  const [isNewUser, setIsNewUser] = useState(false);
 
   useEffect(() => {
     // Get initial session
@@ -23,8 +27,22 @@ export function App() {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
+      
+      // Check if this is a new user
+      if (session?.user && _event === 'SIGNED_IN') {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        
+        // If no profile exists or no events, they're a new user
+        if (!profile || profile.created_at === profile.updated_at) {
+          setIsNewUser(true);
+        }
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -36,6 +54,10 @@ export function App() {
 
   const handleGetStarted = () => {
     setShowAuth(true);
+  };
+
+  const handleOnboardingComplete = () => {
+    setIsNewUser(false);
   };
 
   if (loading) {
@@ -51,21 +73,70 @@ export function App() {
     return <AuthCard onAuthSuccess={handleAuthSuccess} />;
   }
 
-  // Show dashboard if user is authenticated
+  // Show onboarding for new users
+  if (user && isNewUser) {
+    return (
+      <Router>
+        <Routes>
+          <Route path="/onboarding" element={<Onboarding onComplete={handleOnboardingComplete} />} />
+          <Route path="*" element={<Navigate to="/onboarding" replace />} />
+        </Routes>
+      </Router>
+    );
+  }
+
+  // Show dashboard if user is authenticated and not new
   if (user) {
-    return <Dashboard user={user} />;
+    return (
+      <Router>
+        <Routes>
+          <Route path="/onboarding" element={<Onboarding onComplete={handleOnboardingComplete} />} />
+          <Route
+            path="/dashboard"
+            element={
+              <Layout>
+                <Dashboard />
+              </Layout>
+            }
+          />
+          <Route
+            path="/vendors"
+            element={
+              <Layout>
+                <Vendors />
+              </Layout>
+            }
+          />
+          <Route
+            path="/guests"
+            element={
+              <Layout>
+                <Guests />
+              </Layout>
+            }
+          />
+          <Route
+            path="/payments"
+            element={
+              <Layout>
+                <Payments />
+              </Layout>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <Layout>
+                <Settings />
+              </Layout>
+            }
+          />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </Router>
+    );
   }
 
   // Show landing page if not authenticated
-  return (
-    <div className="w-full min-h-screen font-light bg-white text-gray-800">
-      <Navbar onGetStarted={handleGetStarted} />
-      <main>
-        <HeroSection onGetStarted={handleGetStarted} />
-        <TrustedBySection />
-        <HowItWorksSection />
-      </main>
-      <Footer />
-    </div>
-  );
+  return <LandingPage onGetStarted={handleGetStarted} />;
 }
